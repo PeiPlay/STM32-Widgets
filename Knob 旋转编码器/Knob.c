@@ -11,19 +11,20 @@
 #define Knob_Roller_Pin1_EXIT EXTI_Line6
 #define Knob_Roller_Pin2_EXIT EXTI_Line7
 
-#define _TIME_POLLING_TIME_TIMER_MS				10		//当需要定时器轮询检测时，每隔10ms检测一次
+#define _TIME_POLLING_TIME_TIMER_MS			10		//当需要定时器轮询检测时，每隔10ms检测一次
 #define _TIME_BOTTON_DEBOUNCE_TIMER_MS			10		//按键消抖时间，10ms
-#define _TIME_BUTTON_RESET						20		//按键重置时间，100ms。在重置期间，定时器不断轮询检测是否弹起，如果在_TIME_BUTTON_RESET时间内的所有按键都弹起，则认为按键已经弹起，重置结束，否则重新重置
-#define _TIME_LONG_PRESS_WAITING				700		//长按等待时间，700ms，在长按等待时间内，定时器不断轮询检测是否弹起，如果在_TIME_LONG_PRESS_WAITING时间内有两个连续的弹起，则认为按键已经弹起，不触发长按，否则进入长按循环触发
+#define _TIME_BUTTON_RESET				20		//按键重置时间，20ms。在重置期间，定时器不断轮询检测是否弹起，如果在_TIME_BUTTON_RESET时间内的所有按键都弹起，则认为按键已经弹起，重置结束，否则重新重置
+#define _TIME_LONG_PRESS_WAITING			700		//长按等待时间，700ms，在长按等待时间内，定时器不断轮询检测是否弹起，如果在_TIME_LONG_PRESS_WAITING时间内有两个连续的弹起，则认为按键已经弹起，不触发长按，否则进入长按循环触发
 #define _TIME_LONG_PRESS_POLLING_TIMER			100		//长按轮询时间，100ms，定时器每隔100ms检测一次是否弹起，如果弹起，则退出长按循环触发，否则继续触发
-#define _TIME_MULTICLICKS_WAITING				120		//连击等待时间，500ms，在连击等待时间内，定时器不断轮询检测是否按下，如果在_TIME_MULTICLICKS_WAITING时间内有两个连续的按下，则认为按键已经按下，按键连击数+1，否则根据连击数触发相应的连击事件
-#define _TIME_ROLLER_POLLING_TIMER_US			300		//旋转编码器轮询时间，100us，定时器每隔100us检测一次
-#define _TIME_ROLLER_DEBOUNCE_TIMER_US			300		//旋转编码器消抖时间，100us	
-#define _TIME_ROLLER_OVER_TIME_CHECK_T			400		//最多轮询100次等待旋钮恢复
+#define _TIME_MULTICLICKS_WAITING			120		//连击等待时间，120ms，在连击等待时间内，定时器不断轮询检测是否按下，如果在_TIME_MULTICLICKS_WAITING时间内有两个连续的按下，则认为按键已经按下，按键连击数+1，否则根据连击数触发相应的连击事件
+#define _TIME_ROLLER_POLLING_TIMER_US			300		//旋转编码器轮询时间，300us，定时器每隔100us检测一次
+#define _TIME_ROLLER_DEBOUNCE_TIMER_US			300		//旋转编码器消抖时间，300us	
+#define _TIME_ROLLER_OVER_TIME_CHECK_T			200		//最多轮询200次等待旋钮恢复
 
 static uint32_t roller_overtime = 0;
 static uint32_t current_time = 0;	//记录相对于当前事件开始后的时间
 static uint32_t multiclicks = 0;	//记录连击数
+
 enum _Knob_Last_Check//判断上一次检测是否符合要求(用于判断连续的两次轮询)
 {
 	_Satisfied,
@@ -31,16 +32,16 @@ enum _Knob_Last_Check//判断上一次检测是否符合要求(用于判断连�
 } _Botton_Last_Check, _Roller_Last_Check;
 enum _Knob_Timer_Task
 {
-	_TimerTask_Botton_Reset_Polling,							//按键重置定时器轮询检测
-	_TimerTask_Botton_DeBounce,									//消除抖动并检测按键是否按下
+	_TimerTask_Botton_Reset_Polling,						//按键重置定时器轮询检测
+	_TimerTask_Botton_DeBounce,							//消除抖动并检测按键是否按下
 	_TimerTask_LongPress_Waiting_Polling,						//长按等待定时器轮询检测
 	_TimerTask_LongPress_Ongoing_Polling,						//长按进行定时器循环触发
 	_TimerTask_MultiClicks_Waiting_Polling,						//连击等待定时器轮询检测
-	_TimerTask_MultiClicks_WaitForRelease_Polling,				//连击等待按键弹起定时器轮询检测
+	_TimerTask_MultiClicks_WaitForRelease_Polling,					//连击等待按键弹起定时器轮询检测
 
-	_TimerTask_Roller_Reset_Polling,							//旋转编码器重置定时器轮询检测
-	_TimerTask_Roller_DeBounce_Pin1,							//旋转编码器消除抖动并检测旋转编码器是否旋转pin1
-	_TimerTask_Roller_DeBounce_Pin2								//旋转编码器消除抖动并检测旋转编码器是否旋转pin2
+	_TimerTask_Roller_Reset_Polling,						//旋转编码器重置定时器轮询检测
+	_TimerTask_Roller_DeBounce_Pin1,						//旋转编码器消除抖动并检测旋转编码器是否旋转pin1
+	_TimerTask_Roller_DeBounce_Pin2							//旋转编码器消除抖动并检测旋转编码器是否旋转pin2
 } static _Timer_Task;
 void _Knob_Button_Init()	//初始化旋钮按键
 {
@@ -95,7 +96,6 @@ void _Knob_Timer_Init()	//初始化定时器
 
 	TIM_Cmd(TIM2, DISABLE);
 }
-
 void _Knob_Roller_Init()//初始化旋钮的旋转引脚
 {
 	//初始化GPIO
@@ -131,7 +131,6 @@ void _Knob_Timer_ShutDown(void)		//关闭定时器及其中断
 	TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 	TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);;
 }
-
 void _Knob_Roller_EXTI_Cmd(FunctionalState sta)	//旋钮旋转引脚的中断
 {
 	EXTI_InitTypeDef EXTI_InitStructure;
@@ -156,7 +155,6 @@ void _Knob_Timer_Restart_ms(uint32_t time, enum _Knob_Timer_Task task)			//在ti
 	NVIC_EnableIRQ(TIM2_IRQn);
 	TIM_Cmd(TIM2, ENABLE);
 }
-
 void _Knob_Timer_Restart_us(uint32_t time, enum _Knob_Timer_Task task)			//在time微秒后触发定时器中断
 {
 	_Timer_Task = task;
@@ -214,7 +212,6 @@ void Knob_Init(void)
 	_Botton_Last_Check = _Unsatisfied;
 	_Knob_Timer_Restart_ms(_TIME_BOTTON_DEBOUNCE_TIMER_MS, _TimerTask_Botton_Reset_Polling);
 }
-
 void EXTI9_5_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(Knob_Roller_Pin1_EXIT) == SET)
@@ -415,7 +412,6 @@ void TIM2_IRQHandler(void)
 			_Knob_Roller_EXTI_Cmd(ENABLE);
 		}
 		break;
-
 	case _TimerTask_Roller_DeBounce_Pin2:
 		if (_IsRollerActive())//如果引脚都是低电平
 		{
@@ -436,6 +432,3 @@ void TIM2_IRQHandler(void)
 		break;
 	}
 }
-
-
-
